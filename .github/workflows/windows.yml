@@ -1,0 +1,97 @@
+# Windows 离线回归（required check name: Windows regression）
+#
+# 分支模型见 CONTRIBUTING.md：main = 稳定 M1，dev = M2 候选。
+# 本工作流只做三件事：取源码 -> 装 MinGW-w64 UCRT64 编译器 -> 跑 build.bat test。
+#
+# 硬约束（改动前先读 CONTRIBUTING.md 与 AGENTS.md）：
+#   - jobs.regression.name 必须是 "Windows regression"：它是 main 分支保护里
+#     的 required check，改名等于让所有 PR 永远等不到通过。
+#   - 只读权限（contents: read），checkout 不留凭据（persist-credentials: false）。
+#   - 全离线：不设置任何真实凭据 / Pi / SSH / 浏览器，不跑 live probe，不访问
+#     用户数据目录；测试数量随分支增长（main 与 dev 不同），任何地方都不写死。
+#   - 不上传产物、不打包 BMP：build\ 下的预览图只作本地/日志证据。
+name: Windows regression
+
+on:
+  push:
+    branches: [main, dev]
+  pull_request:
+    branches: [main, dev]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  # 每个 ref 一条队列；不取消进行中的运行（cancel-in-progress: false）。
+  # main 上的验收必须能稳定看到"我这一版"的结果，不能被后到的 push 顶掉。
+  group: windows-regression-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  regression:
+    name: Windows regression
+    runs-on: windows-latest
+    timeout-minutes: 60
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up MSYS2 UCRT64
+        id: msys2
+        uses: msys2/setup-msys2@ec48f7c5447b3140e2b088413ae3a55687bccb6e # v2.33.0
+        with:
+          msystem: UCRT64
+          # inherit: 让后续 pwsh/cmd 步骤继承 MSYS2 的 PATH 约定。
+          path-type: inherit
+          # 固定安装位置，避免 runner 默认值（C:\msys64 或 D:\a\_temp\msys64）漂移；
+          # 真实路径仍然以 setup 的输出 + 下面的校验步骤为准。
+          location: C:\msys64
+          # 只要编译器；不装 SSH/Pi/浏览器等会联网或带凭据的东西。
+          install: mingw-w64-ucrt-x86_64-gcc
+
+      - name: Resolve toolchain (TOOLROOT)
+        shell: pwsh
+        run: |
+          $msys2 = '${{ steps.msys2.outputs.msys2-location }}'
+          if ([string]::IsNullOrWhiteSpace($msys2)) {
+            throw 'setup-msys2 did not report msys2-location'
+          }
+          $toolroot = Join-Path $msys2 'ucrt64'
+          $gxx = Join-Path $toolroot 'bin\g++.exe'
+          if (-not (Test-Path -LiteralPath $gxx)) {
+            throw "no g++ under the reported MSYS2 location: $gxx"
+          }
+          if ((Split-Path -Leaf $toolroot) -ne 'ucrt64') {
+            throw "unexpected toolchain root (expected UCRT64): $toolroot"
+          }
+          "TOOLROOT=$toolroot" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          Write-Host "TOOLROOT=$toolroot"
+          & $gxx --version | Select-Object -First 1
+          & $gxx -dumpmachine
+          # build.bat 用 -std=c++20；这里只确认编译器接受该标准，编译本体留给下一步。
+          'int main(){return 0;}' | & $gxx -std=c++20 -x c++ -fsyntax-only -
+          if ($LASTEXITCODE -ne 0) {
+            throw "g++ rejected -std=c++20 (exit $LASTEXITCODE): UCRT64 GCC too old"
+          }
+
+      - name: Build and run tests (offline)
+        shell: pwsh
+        run: |
+          # 与本地完全一致的入口：build-lock 串行化 + build.bat test。
+          # test 目标里已包含无窗口测试、BMP 渲染、以及 tools\check-sources.ps1 源清单自检。
+          powershell -NoProfile -ExecutionPolicy Bypass -File tools\build-lock.ps1 -Target test
+
+      - name: Summarize evidence
+        if: always()
+        shell: pwsh
+        run: |
+          # 只打印证据清单，不上传任何产物（build\ 是生成物，不入库也不出仓）。
+          $tests = @(Get-ChildItem -Path build -Filter '*-test.exe' -File -ErrorAction SilentlyContinue)
+          Write-Host ("test binaries: {0}" -f $tests.Count)
+          $bmps = @(Get-ChildItem -Path build -Filter '*.bmp' -File -ErrorAction SilentlyContinue)
+          foreach ($bmp in $bmps) {
+            Write-Host ("render evidence: {0} ({1} bytes)" -f $bmp.Name, $bmp.Length)
+          }

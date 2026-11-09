@@ -1,0 +1,17 @@
+# 只跟踪 GitHub Actions 的版本；每周一次，PR 目标分支固定 dev。
+# 依赖（MinGW/编译器等）不在这里管理：CI 用 msys2/setup-msys2 现场安装。
+# dependabot 的 PR 同样要过 required check "Windows regression"，
+# 并且必须等 @kkiwkK1 显式验收后才由他合并（见 CONTRIBUTING.md）。
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    target-branch: dev
+    schedule:
+      interval: weekly
+      day: monday
+      time: "03:00"
+      timezone: Asia/Shanghai
+    open-pull-requests-limit: 3
+    commit-message:
+      prefix: ci
