@@ -32,7 +32,22 @@ function Invoke-GitHub([string]$Path, [string]$Method = 'GET', $Body = $null) {
     catch {
         $status = 'unknown'
         if ($_.Exception.Response) { $status = [int]$_.Exception.Response.StatusCode }
-        throw "GitHub API $Method $Path failed (HTTP $status); authentication details suppressed."
+        $detail = ''
+        try {
+            $errorJson = $_.ErrorDetails.Message
+            if (-not $errorJson -and $_.Exception.Response) {
+                $reader = New-Object IO.StreamReader($_.Exception.Response.GetResponseStream())
+                try { $errorJson = $reader.ReadToEnd() } finally { $reader.Dispose() }
+            }
+            $diagnostic = $errorJson | ConvertFrom-Json
+            $detail = [string]$diagnostic.message
+            foreach ($item in @($diagnostic.errors)) {
+                $detail += ' ' + (($item | Select-Object resource, field, code, message | ConvertTo-Json -Compress))
+            }
+            if ($credential['password']) { $detail = $detail.Replace($credential['password'], '[redacted]') }
+            if ($detail.Length -gt 2000) { $detail = $detail.Substring(0, 2000) }
+        } catch { $detail = '' }
+        throw "GitHub API $Method $Path failed (HTTP $status): $detail (authentication details suppressed)."
     }
 }
 
@@ -95,7 +110,7 @@ try {
         $null = Invoke-GitHub "repos/$repository/branches/main/protection" 'PUT' @{
             required_status_checks = @{
                 strict = $true
-                contexts = @()
+                # GitHub's schema treats legacy contexts and app-bound checks as alternatives.
                 checks = @(@{ context = $checkName; app_id = [int]$green[0].app.id })
             }
             enforce_admins = $true
@@ -147,7 +162,7 @@ try {
                 RequiredPullRequest = ($null -ne $protection.required_pull_request_reviews)
                 RequiredApprovals = $protection.required_pull_request_reviews.required_approving_review_count
                 StrictChecks = $protection.required_status_checks.strict
-                RequiredChecks = @($protection.required_status_checks.checks | ForEach-Object { "$($_.context) [app:$($_.app_id)]" }) -join ', '
+                RequiredChecks = @($protection.required_status_checks.checks | Where-Object { $null -ne $_ } | ForEach-Object { "$($_.context) [app:$($_.app_id)]" }) -join ', '
                 ResolveConversations = $protection.required_conversation_resolution.enabled
                 ForcePush = $protection.allow_force_pushes.enabled
                 Delete = $protection.allow_deletions.enabled
