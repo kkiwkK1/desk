@@ -643,7 +643,7 @@ cmd /c build.bat test   rem 回归
 | 新文件 `src/data/aimeter/accounts.*`、`history.*`、`tests/aimeter_accounts.cpp` | 已提交，且进入 `build.bat test` |
 
 M1 已在限定隔离口径下完成验收（真实模型 + 应用桌面，合成业务资料；边界见 §13.8），
-代码未 commit/merge/tag；用户已授权部署 M1（部署与回滚见 [m1-acceptance.md](m1-acceptance.md) §5）。
+代码未 commit/merge/tag；用户已授权部署 M1 并继续开发 M2.0（CardSpec，见 §14）。
 M0b（通知/热键/简报）、M3（看板/任务）未在本轮展开；
 `board.cpp` 拆分（R2）见 `docs/refactor-notes.md`。
 
@@ -824,3 +824,41 @@ M0b（通知/热键/简报）、M3（看板/任务）未在本轮展开；
   主工作区只读、启动项未改，不能表述为用户生产验收通过。共享 store 只在同一进程生效；隔离 GUI 必须使用独立配置目录；`enabled=0`
   只保证两张卡不加载，不清理既有状态文件。证据汇总以 Lead 的验收矩阵与
   [agent-team-handoff.md](agent-team-handoff.md) 为准。
+
+## 14. M2.0 CardSpec（开发候选）
+
+- 这是完整 M2 的首个子阶段，不包含模型生成、HTTP、任意文件数据源、exec、多卡库或自动上板。
+- 应用数据在 `src/data/cardspec/cardspec.{h,cpp}`，复用 JSON 值类型/转码/序列化，另加严格扫描器
+  保留重复键和编码拒绝能力，不改 M1 解析器或框架 SDK；
+  面板为 `src/panels/cardspec/`，`main.cpp` 只注册一个默认隐藏的 CARDSPEC 模块。
+- 宿主标识固定 `cardspec`，Wide 568，手动刷新、无轮询；宿主状态 `cardspec.ini` 与输入
+  `cardspec.json` 分离。JSON 只读当前卡配置文件同目录的固定文件，不接受自选输入路径。
+- v1 必须 `version=1`、`source.type=inline`；只允许 rows（label/text）或 bar（label/value/max）。
+  32KiB、1..8 行、严格 UTF-8、文本/数值边界、未知/重复字段均校验；错误不回显原始输入。
+  完整格式与接口见 [m2-cardspec-plan.md](m2-cardspec-plan.md)。
+- 模块 Load/Refresh 只填 staging，Paint 只读 shown；PendingBodyHeight 交宿主规划后 Commit。
+  缺失/非法 spec 显示可读错误，修复文件并手动刷新可恢复，无须重建或重启；不自动写入示例文件。
+- build 显式添加 CardSpec 数据源与 `cardspec-test`/`cardspec-render-test`，原 M1 十九项保持；
+  面板沿用目录自动发现。最终官方 21/21、六项关键独立重复与 SDK/example 均通过，源清单与
+  完成标记齐；`build/cardspec-preview.bmp` 为测试自绘，中文与进度比例已目视。
+- M2.0 仅按无窗口渲染范围签收，不等于全 M2 或板上 GUI 验收；实际交互、读取竞态/权限/reparse
+  故障仍未实测，数值处理依赖当前默认 C locale。现用 M1 安装保持不变，候选未部署。
+  最终证据和后续边界见 [m2-cardspec-plan.md](m2-cardspec-plan.md) §6。
+
+## 15. M2.1 受限 HTTP（离线候选）
+
+- v1 inline 的 Parse/Serialize 保留；新 `http_source` 支持 HTTP-only v2，只含 profile 与 RFC 6901
+  指针（无 URL/脚本/正则/模型抽取）。通用严格 JSON facade 不改变 M1 JSON 解析器。
+- `http_policy` 处理独立用户配置中的精确 HTTPS URL/授权；`http_winhttp` 独立于框架旧 HttpGet，
+  禁代理/重定向/Cookie/自动鉴权/请求体/重试，IPv4 公网预检+165 解析目标固定+body 前 peer 复核，
+  TLS 默认验证、独立 session/禁全局连接池、不启 H2/H3，安全选项失败关闭。
+- 32KiB 响应硬限，10 秒逻辑预算/DNS 2 秒；每阶段剩余超时，头阶段同时设 6/7，
+  WinHTTP 通知仍可能迟到，不声称硬实时返回。DNS heap ctx 覆盖 hostname/hints/OVERLAPPED/event
+  生命周期，未确认完成的取消上下文最多保留一个，不 detached 线程、不破坏 pending WSA。
+- 模块 `cardspec.ini`（UTF-16LE）中 http.profile/url 与 approved_profile/approved_url 独立于 spec；
+  用户确认精确端点且保存成功才能授权，撤销保存失败仍本进程禁网。初次 Load 只读本地，手动刷新
+  才请求一次，成功标 HTTP/as-of；失败不显示旧数据。权限 epoch 从请求到 Commit/绘制持续核验，
+  重新批准不能复活旧结果。已准入请求无法保证撤回，但返回丢弃。
+- 官方 24/24、七项重复、SDK/example 通过；真实单公开探针却因本机 DNS 返回保留 198.18/15
+  地址被安全拒绝，未进入 HTTPS，因此 TLS/pin/peer 正向链路仍未验收。现用 M1 未改，候选未部署。
+  接口、字段、网络边界与日志详见 [m2-http-plan.md](m2-http-plan.md)。

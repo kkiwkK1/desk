@@ -35,7 +35,7 @@ set "TEMP=build\tmp"
 set "BASEFLAGS=-std=c++20 -O2 -pipe -Wall -Wextra -DNOMINMAX -DUNICODE -D_UNICODE"
 set "CXXFLAGS=%BASEFLAGS% -Isrc"
 set "SDKFLAGS=%BASEFLAGS% -Ibuild/sdk/include"
-set "LIBS=-static -static-libgcc -static-libstdc++ -lshell32 -luser32 -lgdi32 -lole32 -luuid -lwinhttp -ladvapi32 -limm32 -lversion"
+set "LIBS=-static -static-libgcc -static-libstdc++ -lshell32 -luser32 -lgdi32 -lole32 -luuid -lwinhttp -ladvapi32 -limm32 -lversion -lws2_32"
 set "FW=canvas cjk view layout store http secrets prompt proc conpty skin board board_layout board_plan board_grow display diag appenv"
 
 echo [build] framework
@@ -125,6 +125,16 @@ for %%M in (json pi_client memory context engine) do (
     g++ %CXXFLAGS% -c "src\data\assistant\%%M.cpp" -o "build\obj\desk\asm\%%M.o"
     if errorlevel 1 exit /b 1
     set "DOBJ=!DOBJ! "build\obj\desk\asm\%%M.o""
+)
+rem M2.0 CardSpec: application-layer declarative inline data (not framework SDK).
+if not exist "build\obj\desk\csp" mkdir "build\obj\desk\csp"
+g++ %CXXFLAGS% -c "src\data\cardspec\cardspec.cpp" -o "build\obj\desk\csp\cardspec.o"
+if errorlevel 1 exit /b 1
+set "DOBJ=!DOBJ! "build\obj\desk\csp\cardspec.o""
+for %%M in (http_source http_policy http_winhttp) do (
+    g++ %CXXFLAGS% -c "src\data\cardspec\%%M.cpp" -o "build\obj\desk\csp\%%M.o"
+    if errorlevel 1 exit /b 1
+    set "DOBJ=!DOBJ! "build\obj\desk\csp\%%M.o""
 )
 for %%M in (providers status_view collect) do (
     g++ %CXXFLAGS% -c "src\data\server\%%M.cpp" -o "build\obj\desk\srv\%%M.o"
@@ -402,6 +412,46 @@ if /i "%~1"=="test" (
     move /y "build\cli-test.exe.new" "build\cli-test.exe" >nul
     if errorlevel 1 exit /b 1
 
+    echo   - cardspec core
+    g++ %CXXFLAGS% -municode -c "tests\cardspec.cpp" -o "build\obj\test\cardspec.o"
+    if errorlevel 1 exit /b 1
+    g++ -municode -mconsole "build\obj\test\cardspec.o" "build\obj\desk\csp\cardspec.o" "build\obj\test\assistant_json.o" "build\libwg.a" -o "build\cardspec-test.exe.new" %LIBS%
+    if errorlevel 1 exit /b 1
+    move /y "build\cardspec-test.exe.new" "build\cardspec-test.exe" >nul
+    if errorlevel 1 exit /b 1
+
+    echo   - cardspec render
+    g++ %CXXFLAGS% -municode -c "tests\cardspec_render.cpp" -o "build\obj\test\cardspec_render.o"
+    if errorlevel 1 exit /b 1
+    g++ -municode -mconsole "build\obj\test\cardspec_render.o" "build\obj\panels\cardspec\cardspec.o" "build\obj\panels\cardspec\cardspec_view.o" "build\obj\desk\csp\http_source.o" "build\obj\desk\csp\http_policy.o" "build\obj\desk\csp\http_winhttp.o" "build\obj\desk\csp\cardspec.o" "build\obj\test\assistant_json.o" "build\libwg.a" -o "build\cardspec-render-test.exe.new" %LIBS%
+    if errorlevel 1 exit /b 1
+    move /y "build\cardspec-render-test.exe.new" "build\cardspec-render-test.exe" >nul
+    if errorlevel 1 exit /b 1
+
+    echo   - cardspec HTTP source bindings
+    g++ %CXXFLAGS% -municode -c "tests\cardspec_source.cpp" -o "build\obj\test\cardspec_source.o"
+    if errorlevel 1 exit /b 1
+    g++ -municode -mconsole "build\obj\test\cardspec_source.o" "build\obj\desk\csp\http_source.o" "build\obj\desk\csp\cardspec.o" "build\obj\test\assistant_json.o" "build\libwg.a" -o "build\cardspec-source-test.exe.new" %LIBS%
+    if errorlevel 1 exit /b 1
+    move /y "build\cardspec-source-test.exe.new" "build\cardspec-source-test.exe" >nul
+    if errorlevel 1 exit /b 1
+
+    echo   - cardspec HTTPS policy
+    g++ %CXXFLAGS% -municode -c "tests\cardspec_http.cpp" -o "build\obj\test\cardspec_http.o"
+    if errorlevel 1 exit /b 1
+    g++ -municode -mconsole "build\obj\test\cardspec_http.o" "build\obj\desk\csp\http_source.o" "build\obj\desk\csp\http_policy.o" "build\obj\desk\csp\http_winhttp.o" "build\obj\desk\csp\cardspec.o" "build\obj\test\assistant_json.o" "build\libwg.a" -o "build\cardspec-http-test.exe.new" %LIBS%
+    if errorlevel 1 exit /b 1
+    move /y "build\cardspec-http-test.exe.new" "build\cardspec-http-test.exe" >nul
+    if errorlevel 1 exit /b 1
+
+    echo   - cardspec network UI
+    g++ %CXXFLAGS% -municode -c "tests\cardspec_network.cpp" -o "build\obj\test\cardspec_network.o"
+    if errorlevel 1 exit /b 1
+    g++ -municode -mconsole "build\obj\test\cardspec_network.o" "build\obj\panels\cardspec\cardspec.o" "build\obj\panels\cardspec\cardspec_view.o" "build\obj\desk\csp\http_source.o" "build\obj\desk\csp\http_policy.o" "build\obj\desk\csp\http_winhttp.o" "build\obj\desk\csp\cardspec.o" "build\obj\test\assistant_json.o" "build\libwg.a" -o "build\cardspec-network-test.exe.new" %LIBS%
+    if errorlevel 1 exit /b 1
+    move /y "build\cardspec-network-test.exe.new" "build\cardspec-network-test.exe" >nul
+    if errorlevel 1 exit /b 1
+
     echo [build] sign tests
     powershell -NoProfile -ExecutionPolicy Bypass -File tools\sign-local.ps1 -Path "build\*-test.exe"
     if errorlevel 1 (echo [build] test signing failed & exit /b 1)
@@ -450,6 +500,16 @@ if /i "%~1"=="test" (
     "build\cli-test.exe"
     if errorlevel 1 exit /b 1
     "build\aimeter-accounts-test.exe"
+    if errorlevel 1 exit /b 1
+    "build\cardspec-test.exe"
+    if errorlevel 1 exit /b 1
+    "build\cardspec-render-test.exe"
+    if errorlevel 1 exit /b 1
+    "build\cardspec-source-test.exe"
+    if errorlevel 1 exit /b 1
+    "build\cardspec-http-test.exe"
+    if errorlevel 1 exit /b 1
+    "build\cardspec-network-test.exe"
     if errorlevel 1 exit /b 1
 
     echo [build] source inventory

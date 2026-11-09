@@ -5,6 +5,7 @@
 // adds it to the Add Module menu and persists its position automatically.
 #include "panels/account/account.h"
 #include "panels/assistant/assistant.h"
+#include "panels/cardspec/cardspec.h"
 #include "panels/memory/memory.h"
 #include "panels/ps/ps.h"
 #include "panels/servers/servers.h"
@@ -177,6 +178,7 @@ int WINAPI wWinMain(HINSTANCE, HINSTANCE, PWSTR, int) {
         modules.push_back(CreateAccountModule());
         modules.push_back(CreateServersModule());
         modules.push_back(CreatePsModule());
+        modules.push_back(CreateCardSpecModule());
     }
     if (assistantEnabled) {
         modules.push_back(CreateAssistantModule());

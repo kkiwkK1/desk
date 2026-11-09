@@ -1,14 +1,10 @@
 # M1 接管与 Agent Team 任务板（2026-11-08—09）
 
-> **仓库快照（desk/main）**：本仓库 `main` 是已部署 M1 的稳定源码导入，保留全部
-> M1 修复与验收证据（19 项测试、源清单、m1-acceptance 证据）；M2.0 CardSpec /
-> M2.1 HTTP 候选只在 `dev` 分支推进，`main` 不注册、不构建、不索引其计划文档。
-> 下文 M1 记录按导入时的原始内容保留，不重写历史结论。
->
-> GitHub 初始化已重新实跑 19/19、framework/example 与三项关键重复。源快照保留两处
-> 已存在的非功能性空白：`archive/README.md` 末尾空行、`src/widget/board.cpp` 原行尾空格；
-> 两文件与已验收工作树逐字节一致，首次导入仅豁免这两条旧诊断，不改归档、不放宽后续提交检查。
-> 后续遵循根目录 [CONTRIBUTING.md](../CONTRIBUTING.md)，不按下文历史分支名继续开发。
+> **当前 GitHub 流程**：正式仓库为 `kkiwkK1/desk`。`main` 的 `a035f02` 是已重新通过
+> 19/19、SDK/example 的稳定 M1 导入；本分支为独立新仓库的 `dev`，仅承载 M2 开发候选。
+> 原 aimeter 仓库历史/工作树没有被改写。后续按 [CONTRIBUTING.md](../CONTRIBUTING.md)
+> 在 dev 开发并提 PR，CI 绿且用户明确验收后才能 merge commit 进 main，未验收只开草稿 PR。
+> 下文旧工作区、feat 分支与会话记录为历史，不是后续操作指令。M2.1 的真实 HTTPS 正向验收仍未完成。
 
 ## 接管基线
 
@@ -148,3 +144,52 @@
 用户在隔离签收后明确要求“开始部署等我验收”。Lead 经只读部署核对后，备份现用安装目录，正常关闭旧 PID 3332，使用正式安装脚本显式部署到 `%LOCALAPPDATA%\Programs\Desktop Desk Assistant`，未覆盖配置/记忆；通过 Explorer 启动新版 PID 31808，生产板窗口可见、响应正常，启动项哈希未变。
 
 备份位于 `%LOCALAPPDATA%\Desktop Desk Backups\m1-20261109-160931-8df91d`；可执行文件哈希与最终验收产物一致。**当前已部署运行，等待用户验收，不代表用户生产验收已通过**。部署与回滚说明见 [m1-acceptance.md](m1-acceptance.md) §5；该部署步骤未提交/合并/打 tag，也未启动 M2。
+
+## 用户授权继续：M2.0
+
+用户随后回复“ok继续推进”。Lead 开始 M2.0；不据此补写用户逐项手工验收结果，不再次操作现用 M1。
+完整阶段边界与冻结 schema/API 见 [m2-cardspec-plan.md](m2-cardspec-plan.md)。
+
+| lane | owner | 独占写作用域 | 交付 |
+|---|---|---|---|
+| M2.0-core | fixer | `src/data/cardspec/cardspec.cpp`、`tests/cardspec.cpp` | 严格无 IO 的 inline-only schema/序列化与错误矩阵 |
+| M2.0-ui | fixer | `src/panels/cardspec/*`、`tests/cardspec_render.cpp` | 单张默认隐藏 CARDSPEC 卡，固定 JSON 文件、手动刷新与恢复、渲染回归 |
+| M2.0-lead | Lead | `src/data/cardspec/cardspec.h`、main/build、docs/AGENTS | 冻结接口、接线、唯一构建授权与签收 |
+
+M2.0 由 w31 实现 core+错误矩阵，w32 实现 panel/view+无窗口渲染，Lead 冻结头并接 main/build；
+w34 只读审计，w33 是唯一构建者。首次两项编译错误和随后一项错误生命周期断言均定点修复，
+没有修改框架/M1 组件、删除覆盖或放宽阈值。
+
+最终官方 `test` 21/21、六项关键独立重复、framework/example 均 exit 0，源清单和 `[build] ok` 齐全；
+日志 `m2b3-20261109-165404-build.{out,err}.log` 位于会话临时目录。候选签名已执行，测试自绘
+`build/cardspec-preview.bmp` 中文/3/5 与 0/5 比例已目视。M2.0 可按无窗口渲染范围签收，
+不是完整 M2 或实际板上 GUI 验收；最终明细见 [m2-cardspec-plan.md](m2-cardspec-plan.md) §6。
+
+M1 三十八文件未提交基线全部保留，不自动 git 写；M2 核心/UI 新文件分离，不修改现有
+assistant/memory/RPC 或框架，不恢复模型工具、不执行生成代码。已部署 M1 未触碰，M2 候选未部署。
+
+## 用户授权继续：M2.1 HTTP
+
+用户再次要求“继续”，Lead 按 [m2-http-plan.md](m2-http-plan.md) 推进受限 HTTP。
+已冻结 `strict_json.h`、`http_source.h`、`http.h`、面板工厂选项与 ViewState/LoadOptions；
+旧 v1 Parse 仍严格只接 inline，v2 由新入口处理。初次 Load 零出网、精确用户授权与响应不缓存旧值。
+
+| lane | 独占写作用域 | 交付 |
+|---|---|---|
+| M2.1-source | `src/data/cardspec/{cardspec,http_source}.cpp`、`tests/cardspec_source.cpp` | 通用严格 JSON facade、v2 与 Pointer 绑定 |
+| M2.1-network | `src/data/cardspec/{http_policy,http_winhttp}.cpp`、`tests/cardspec_http.cpp` | 用户授权/公网策略/独立 WinHTTP、fake 矩阵与固定公开探针 |
+| M2.1-ui | `src/panels/cardspec/*`、`tests/cardspec_network.cpp` | 手动 Fetch、确认/撤销、权限 epoch、as-of 与错误恢复 |
+| M2.1-lead | 新公共 headers、build、docs/AGENTS；`tests/cardspec_source.cpp` 仅剩余 fixture 字符串引号 | 接口裁决/接线/唯一构建授权；原作者 idle 后接手单点夹具修复 |
+
+本阶段最终已完成新的官方 24/24、七项独立重复、framework/example 与候选签名（日志
+`m21b4-20261109-183805-build.{out,err}.log` 在会话临时目录）；HTTP fake 517 checks/73 resolve/50 exchange。
+w38/w39/w32 分别交付 source、网络、UI；w34 与 w40 审计并复核权限发布 epoch/DNS lifetime/headers/
+选项 scope 等修复，w33 唯一构建。三处 Source fixture 引号及未批准应 Blocked 的测试前置均修正，
+没有放宽 schema/权限，不修改 M1 或框架。
+
+w33 唯一授权固定公开 GitHub 探针实际 exit 1（60ms，AddressBlocked/status0）；只读解析诊断确认
+本机返回保留 198.18/15 映射，过滤生效、未进入 HTTPS，也未重试/代理兜底/改变系统设置。
+因此 **M2.1 离线候选通过，真实 HTTPS 正向验收未完成**，不能以安全拒绝当所有联网功能已验收。
+详情见 [m2-http-plan.md](m2-http-plan.md) §6；需要正常公网 DNS/直连复验或另行设计显式代理授权。
+
+现用 M1/凭据/启动项未触碰，M2 候选未部署，无 git 写。
