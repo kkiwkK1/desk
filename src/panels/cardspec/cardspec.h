@@ -1,14 +1,11 @@
-// CARDSPEC card (M2.0): one fixed, declarative card rendered from
-// <config dir>\cardspec.json.
-//
-// The card owns no input surface: it reads that one fixed file inside the
-// config directory, parses it through the frozen cardspec:: API and paints the
-// spec title plus 1..8 rows (rows or bar layout). There is no timer, no
-// thread, no network, no arbitrary path and no code generation: refresh is
-// manual (refreshSeconds = 0) through the card menu, which only asks the host
-// for a refresh (wg::Module::RequestRefresh). A missing / oversized / invalid
-// file turns into a readable Chinese error card; fixing the file and
-// refreshing restores the content.
+// CARDSPEC card: one fixed, declarative card from <config dir>\cardspec.json.
+// v1 inline is local; v2 HTTP only references a separately authorized profile
+// and binds an injected fetch result. No arbitrary path or code generation.
+// The host owns the worker; the module has no timer (refreshSeconds = 0).
+// The host refreshes once after OnMenu: menu callbacks must not also call
+// RequestRefresh(), which would queue a duplicate fetch. Missing / oversized /
+// invalid input replaces the old data with a readable error; fixing the file
+// and refreshing restores the content.
 //
 // LoadData / RefreshData fully replace the staged view, so a failure can never
 // publish stale successful data, and PaintBody only reads the host's shown

@@ -5,6 +5,11 @@
 > 原 aimeter 仓库历史/工作树没有被改写。后续按 [CONTRIBUTING.md](../CONTRIBUTING.md)
 > 在 dev 开发并提 PR，CI 绿且用户明确验收后才能 merge commit 进 main，未验收只开草稿 PR。
 > 下文旧工作区、feat 分支与会话记录为历史，不是后续操作指令。M2.1 的真实 HTTPS 正向验收仍未完成。
+>
+> **本轮推进**：2026-11-10 已新增明确失败关闭的 CardSpec-only/native fake 测试模式和 GUI 脚本。
+> 发现并修正菜单的重复刷新：模块不再重复 RequestRefresh，宿主负责一次；完整官方回归通过，
+> 新候选实际 GUI 74/74（不是旧失败轮/静态图凑绿），授权/Reload/restart 的 fake 增量精确 1。
+> 完整证据、分工及限制见 [m2-gui-acceptance.md](m2-gui-acceptance.md)。PR 仍草稿，不合 main/不部署。
 
 ## 接管基线
 

@@ -9,9 +9,12 @@
 // without an injected transport.
 //
 // Refresh is still manual (refreshSeconds = 0, no timer, no thread, no retry,
-// no cache): the module menu asks the host for a refresh and the host runs the
-// single worker. A successful fetch publishes rows plus an "AS OF" caption; any
-// failure replaces the previous values instead of faking fresh data.
+// no cache): after a module menu action the host runs exactly one worker, and
+// the menu callbacks below never call RequestRefresh() themselves - a second
+// request would be posted while the first worker is still busy, so the board
+// would set its `again` flag and fetch twice per click. A successful fetch
+// publishes rows plus an "AS OF" caption; any failure replaces the previous
+// values instead of faking fresh data.
 //
 // Permission epochs close the whole publication chain, not just the transport:
 // every HTTP view records the epoch it was produced under, the read re-checks
@@ -128,8 +131,13 @@ public:
     }
 
     void OnMenu(int id) override {
+        // The host starts exactly one refresh after a module menu action
+        // (board: OnMenu -> StartRefresh), so nothing here may call
+        // RequestRefresh(): that would post a second refresh while the first
+        // worker is still busy and the card would fetch twice per click.
         switch (id) {
-        case 1: RequestRefresh(); return;
+        case 1:  // Reload: the host's post-menu refresh re-reads the spec.
+            return;
         case 2: Approve(); return;
         case 3: Revoke(); return;
         default: return;
@@ -304,14 +312,14 @@ private:
         if (profile.empty() ||
             !cardspec::AuthorizeHttp(profile, candidate, &endpoint, &failure)) {
             // A broken config must surface as a readable blocked card, never as
-            // a modal the user cannot control.
+            // a modal the user cannot control. The note is consumed by the
+            // host's post-menu refresh, which is also the single read; asking
+            // for another one here would fetch twice.
             Note(L"无法批准：端点配置不合法或未配置");
-            RequestRefresh();
             return;
         }
         if (!confirm_) {
             Note(L"缺少确认入口，未批准");
-            RequestRefresh();
             return;
         }
         const std::wstring prompt =
@@ -342,10 +350,11 @@ private:
         }
         if (!note.empty()) Note(note);
         // The permission epoch just moved: repaint so an already committed
-        // result stops being shown, then ask for the one refresh this approval
-        // may cause (a saved approval is the only way that refresh may fetch).
+        // result stops being shown. The host's post-menu refresh is the one and
+        // only fetch this approval may cause (a saved approval is the only way
+        // that refresh may fetch); requesting a refresh here as well would run
+        // a second worker right after the first one.
         RequestRepaint();
-        RequestRefresh();
     }
 
     void Revoke() {
@@ -363,9 +372,10 @@ private:
         }
         if (!note.empty()) Note(note);
         // Repaint on the UI thread (serialized with this menu action) so the
-        // revoked result is never shown again, then let the host re-read.
+        // revoked result is never shown again. The host re-reads once after
+        // dispatching this menu action; a RequestRefresh() here would schedule
+        // a second worker behind the first one.
         RequestRepaint();
-        RequestRefresh();
     }
 
     mutable std::mutex mu_;

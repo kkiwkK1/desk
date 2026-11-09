@@ -862,3 +862,10 @@ M0b（通知/热键/简报）、M3（看板/任务）未在本轮展开；
 - 官方 24/24、七项重复、SDK/example 通过；真实单公开探针却因本机 DNS 返回保留 198.18/15
   地址被安全拒绝，未进入 HTTPS，因此 TLS/pin/peer 正向链路仍未验收。现用 M1 未改，候选未部署。
   接口、字段、网络边界与日志详见 [m2-http-plan.md](m2-http-plan.md)。
+- 隔离 GUI 专用 `DESK_TEST_CARDSPEC_ONLY=1` 必须同时有合法 test suffix 与显式有效 cfg，
+  否则在配置/建窗前失败关闭；只注册 CardSpec，跳过所有其他模块和热键。固定 native fake
+  fetch 不使用 DNS/WinHTTP，保留真实确认框/授权/刷新/渲染；合成 cfg 的计数文件提供调用
+  正负控制，不改变生产传输。详见 [m2-gui-acceptance.md](m2-gui-acceptance.md)。
+- 宿主菜单在模块 `OnMenu` 返回后负责一次刷新。CardSpec 菜单不再重复调用 `RequestRefresh`，
+  防止同一点击排入第二次取数；撤销仍立即推进 epoch/重绘，未授权的宿主刷新不得调用 transport。
+  非菜单的异步更新仍可正常请求刷新。

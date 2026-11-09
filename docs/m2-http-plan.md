@@ -65,7 +65,9 @@ http.approved_url=
 - 已获准进入在飞的请求不保证能在发包前撤回，但返回结果要因权限 epoch 变化被丢弃，后续请求禁止。
   epoch 不仅检查 transport/decode，也随 ViewState 盖捕获戳，在测量/Status/Paint 实时核对，
   防止 Refresh 完成后、Commit 前撤销仍闪现旧数据；重新批准也不能复活旧结果，必须重新取数。
-- 批准成功可 RequestRefresh；每次只发一条 GET。没有批准或初次 Load 时 fake fetch 计数必须为 0。
+- 批准成功由宿主菜单路径触发一次刷新，每次只发一条 GET。CardSpec 的 `OnMenu` 不再重复
+  调用 `RequestRefresh()`，避免与宿主刷新叠加成 `again` 两次取数；异步外部事件仍可使用该接口。
+  没有批准或初次 Load 时 fake fetch 计数必须为 0。
 
 ## 4. 独占范围与冻结接口
 
@@ -109,5 +111,21 @@ Lead 写并冻结 `strict_json.h`、`http_source.h`、`http.h` 与公共工厂�
   因公网过滤，未进入 HTTPS 请求。未修改 DNS/代理/全局网络配置，也未放开该地址段。
 - 因此仅获得“DNS/保留地址被安全拒绝”的实际证据，**没有**真实 TLS/SNI/165 pin/peer/
   响应头/JSON 正向链路证据，不将离线绿或 fail-closed 当作公网功能已验收。
-- 实际板上 GUI/确认对话框、SAC 候选启动与部署未做；现用 M1 不变，代码未提交/合并/tag。
+- 实际板上 GUI/确认对话框已在新显式隔离模式中通过 74 项（固定 native fake，非真实 HTTPS），
+  含菜单单取数修复及真实复制候选启动；证据见 [m2-gui-acceptance.md](m2-gui-acceptance.md)。
+  未部署/合并/tag，现用 M1 不变；候选在 dev/草稿 PR，仍需用户对整个 M2 明确验收。
   后续需在正常公网 DNS/直连环境复验，或另行设计用户显式授权的代理能力；不能自动用代理兜底。
+
+## 7. 当前网络裁决与独立 GUI 验收
+
+当前继续采用现有公网直连路径：198.18/15 仍拒绝，不新增 `pin_ip`、代理或 DoH。
+这不阻塞离线/实际隔离 GUI 验收，但阻塞“真实公网 HTTPS 功能已验收”的结论。
+GUI 使用显式隔离模式及固定 native fake，见 [m2-gui-acceptance.md](m2-gui-acceptance.md)。
+
+未来若需要适配网络环境，应先明确授权变化，而非静默兜底：
+
+- 可信配置中手工指定公网 IP 会扩展授权元组与撤销 epoch，需单独设计/授权；并非本轮能力。
+- 显式 proxy/Fake-IP 模式改变 socket peer 的含义，不能沿用“真实目标公网已核验”的表述。
+- DoH 引入额外第三方请求与信任关系，不能凭已有端点授权默认启用。
+
+应用的无显式代理/TLS/peer 检查也不是 OS 沙箱或物理链路拓扑证明。

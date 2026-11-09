@@ -9,12 +9,18 @@
 //
 // Covers: initial Load is zero-network even when approved; missing/invalid/
 // changed approval is Blocked with zero fetch; approve cancel changes nothing;
-// approve persists the exact profile+URL binding and then fetches once; v2
+// approve persists the exact profile+URL binding and the host's single
+// post-menu refresh then fetches exactly once (the module callback itself
+// requests no refresh, so a menu action cannot fetch twice); v2
 // rows/bar bind and paint with an "AS OF" line and the HTTP chip; non-200,
 // oversized, bad JSON and missing-binding responses become HTTP errors that
 // clear the previous values; a fixed endpoint recovers; revoke persists and
 // blocks; an in-flight result is discarded after a revoke; a failed approval
 // save rolls back; a failed revoke save still blocks the process.
+//
+// Every menu block asserts the same split: the module callback asks for 0
+// refreshes (the board runs one after OnMenu), and the explicit Refresh() that
+// stands in for the host's post-menu refresh is what performs the single GET.
 #include "data/cardspec/cardspec.h"
 #include "data/cardspec/http.h"
 #include "data/cardspec/http_source.h"
@@ -610,7 +616,10 @@ int wmain() {
         Check(!approvedUrl.empty() && approvedUrl.find(L"https://") == 0,
               L"approve saves the canonical URL");
         Check(store.Get(L"http.url") == kUrl, L"approve never rewrites the user endpoint");
-        Check(refreshes == 1, L"approve asks the host for exactly one refresh");
+        // The board runs the refresh after a module menu action, so the callback
+        // itself asks for none: 0 module requests, 0 fetch until the host's one.
+        Check(refreshes == 0, L"approve leaves the single refresh to the host menu dispatch");
+        Check(fake.calls == 0, L"approve performs no fetch by itself");
 
         {
             wg::Store saved;
@@ -624,7 +633,7 @@ int wmain() {
         }
 
         module->Refresh();
-        Check(fake.calls == 1, L"the refresh performs one GET");
+        Check(fake.calls == 1, L"the host refresh after approve performs exactly one GET");
         Check(fake.lastPolicy.profile == "demo" && fake.lastPolicy.url == kUrl,
               L"the fetch uses the trusted config");
         Check(module->PendingBodyHeight() == asOfH, L"pending height includes the as-of line");
@@ -698,8 +707,8 @@ int wmain() {
         Check(store.Get(L"http.approved_profile").empty() &&
                   store.Get(L"http.approved_url").empty(),
               L"revoke clears the in-memory approval");
-        Check(refreshes == 1, L"revoke requests a refresh");
-        module->Refresh();
+        Check(refreshes == 0, L"revoke leaves the single refresh to the host menu dispatch");
+        module->Refresh();  // the host's post-menu refresh
         module->Commit();
         CheckChip(*module, L"BLOCKED", L"a revoked card is Blocked");
         Check(fake.calls == 0, L"a revoked card never fetches");
@@ -741,7 +750,7 @@ int wmain() {
         Check(fake.calls == 0, L"the epoch fixture stays zero-network");
         module->Refresh();
         Check(fake.calls == 1, L"the in-flight request was sent once");
-        Check(refreshes == 1, L"the in-flight revoke requested a refresh");
+        Check(refreshes == 0, L"the in-flight revoke leaves the refresh to the host");
         module->Commit();
         CheckChip(*module, L"BLOCKED",
                   L"a stale in-flight result is never published as HTTP");
@@ -791,7 +800,7 @@ int wmain() {
         module->Refresh();  // the worker produced a fresh Ok state...
         Check(fake.calls == 1, L"the worker fetched once");
         module->OnMenu(3);  // ...and the user revokes before Commit.
-        Check(refreshes == 1, L"the revoke requests a refresh");
+        Check(refreshes == 0, L"the revoke leaves the single refresh to the host dispatch");
         Check(module->Menu().size() == 2 && module->Menu()[1].id == 2,
               L"the menu offers Approve right after a revoke (no wait for Refresh)");
 
@@ -814,6 +823,7 @@ int wmain() {
         const int callsBefore = fake.calls;
         module->OnMenu(2);
         Check(store.Get(L"http.approved_profile") == L"demo", L"approval can be granted again");
+        Check(refreshes == 0, L"re-approval asks the host for no extra refresh");
         Check(fake.calls == callsBefore, L"re-approval performs no fetch by itself");
         Check(module->Menu().size() == 2 && module->Menu()[1].id == 3,
               L"the menu offers Revoke again after re-approval");
@@ -870,8 +880,9 @@ int wmain() {
         Check(store.Get(L"http.approved_profile").empty(),
               L"a failed approve save is rolled back in memory");
         Check(fake.calls == 0, L"a failed approve save fetches nothing");
-        Check(refreshes == 1, L"the failed approve still republishes a readable state");
-        module->Refresh();
+        Check(refreshes == 0,
+              L"the failed approve leaves the refresh to the host menu dispatch");
+        module->Refresh();  // the host's post-menu refresh republishes the note
         module->Commit();
         CheckChip(*module, L"BLOCKED", L"a failed approve is not effective");
         Check(fake.calls == 0, L"the refresh after a failed approve fetches nothing");
@@ -940,8 +951,9 @@ int wmain() {
         module->OnMenu(3);
         Check(store.Get(L"http.approved_profile").empty(),
               L"a failed revoke save still clears the in-memory approval");
-        Check(refreshes == 1, L"the failed revoke requests a refresh");
-        module->Refresh();
+        Check(refreshes == 0,
+              L"the failed revoke leaves the refresh to the host menu dispatch");
+        module->Refresh();  // the host's post-menu refresh
         module->Commit();
         CheckChip(*module, L"BLOCKED",
                   L"a failed revoke save still blocks this process");

@@ -434,6 +434,9 @@ int wmain() {
     }
 
     // ---- manual Reload menu: request only, no IO --------------------------
+    // The board owns the refresh that follows a menu action (OnMenu ->
+    // StartRefresh), so the callback itself must ask for nothing: 0 module
+    // requests here, and the host-side refresh is the single worker.
     const std::vector<MenuItem> menu = module->Menu();
     Check(menu.size() == 1, L"exactly one manual reload entry");
     Check(!menu.empty() && menu[0].label.find(L"Reload") == 0,
@@ -441,11 +444,17 @@ int wmain() {
     const int beforeMenu = refreshes;
     const int heightBeforeMenu = module->BodyHeight();
     if (!menu.empty()) module->OnMenu(menu[0].id);
-    Check(refreshes == beforeMenu + 1, L"Reload only requests a host refresh");
+    Check(refreshes == beforeMenu,
+          L"Reload leaves the single refresh to the host menu dispatch");
     Check(module->BodyHeight() == heightBeforeMenu,
           L"the menu entry performs no IO and no re-load");
     module->OnMenu(-7);
-    Check(refreshes == beforeMenu + 1, L"unknown menu ids do nothing");
+    Check(refreshes == beforeMenu, L"unknown menu ids do nothing");
+    // The host's own refresh after the menu action is what reloads the card;
+    // proving it here keeps "no IO in the callback" from hiding a dead reload.
+    module->Refresh();
+    module->Commit();
+    Check(refreshes == beforeMenu, L"the host refresh needs no module request");
 
     // ---- eliding and safe clipping ---------------------------------------
     {
