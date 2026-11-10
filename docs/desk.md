@@ -687,3 +687,40 @@ real 40/40；real 仍使用合成资料与 assistant-only，不等于生产验�
 | 提示 `ASSISTANT HOTKEY UNAVAILABLE - RIGHT CLICK: SUMMON ASSISTANT` | 召唤热键被其他程序占用。用板菜单 `Summon assistant`，或改 `assistant.ini` 的 `hotkey` 后重启。 |
 | Pi 启动报 `trust.json.lock` EPERM / `PI CRASH 1` | desk 从受限完整性/受限沙箱启动，子进程继承了限制。用普通权限从 Explorer 启动，或安装到 `%LOCALAPPDATA%\Programs` 下运行；不要靠提权绕过。 |
 | 回答报 `Unknown provider` | 本机 CommandCode provider 由扩展提供；`provider_extension` 必须指向已安装的官方扩展，不能把扩展全部关掉。 |
+
+## 13. CARDSPEC（M2.0 开发候选）
+
+**现用 M1 尚无此卡，本轮不部署 M2 候选。** 候选注册固定单张 CARDSPEC，默认隐藏，
+入口为 Add module；Wide 568，手动刷新，不自动轮询。JSON 标题显示在 body，外框标题固定。
+
+在隔离测试配置目录创建 UTF-8 `cardspec.json`，例如：
+
+```json
+{"version":1,"title":"今日目标","source":{"type":"inline"},"layout":"rows","rows":[{"label":"学习","text":"阅读三十分钟"}]}
+```
+
+进度条使用 `layout=bar`，行字段改为 `label/value/max`，如 `value=3,max=5`。
+修改该 JSON 后手动刷新，无须重新编译或重启；缺失/非法/超限时卡内显示错误，修复再刷新可恢复。
+`cardspec.ini` 是宿主可见性等状态文件，**不要把 JSON 写进 INI**；不支持任意路径或其他数据源。
+
+v1 上限 32KiB、1..8 行，拒绝未知/重复字段、非法编码/控制字符和越界进度。
+v1 不支持网络、任意文件数据源、exec 或模型自动生成/上板；完整格式与当前验证状态见
+[m2-cardspec-plan.md](m2-cardspec-plan.md)。
+
+## 14. HTTP-only v2（M2.1 离线候选，未部署）
+
+v2 只在 spec 中引用 `profile`，并用 JSON Pointer 选择响应字段；URL 与批准记录在单独的
+`cardspec.ini`（UTF-16LE 单 BOM）四个 `http.*` 键中，不能由 spec 自行授予网络权限。
+初次加载只显示 Ready/Blocked、不请求网络；用户确认精确端点且保存成功后，可触发一次刷新取数，
+后续由用户手动刷新。取消确认不写授权、不请求。
+撤销会禁用后续请求、丢弃在飞结果，重新批准不复活旧数据。失败显示错误，不把上次成功值伪装新数据。
+
+仅公开无鉴权 HTTPS/443，默认禁止代理、重定向、Cookie 和自动凭据，不支持任意私网/文件/exec。
+源码与 24/24 离线回归已通过，但本机公开探针的 DNS 返回 198.18/15 保留地址，被策略安全拒绝；
+**真实 TLS/IP 固定/peer/HTTP 成功链路仍未验收**。不要通过放开保留网段或自动代理兜底凑通过。
+现用 M1 没有更新；参数、完整 v2 示例、日志与下一步见 [m2-http-plan.md](m2-http-plan.md)。
+
+实际离线 GUI 验收使用 `DESK_TEST_CARDSPEC_ONLY=1`（还必须有合法实例后缀和显式有效隔离配置目录）。
+该模式只注册 CardSpec，始终注入固定合成 fetch，保持真实确认对话框；不加载其他业务模块，
+不触碰全局热键/托盘/自启，缺失隔离参数静默退出 2。计数、截图和授权交互的完整证据口径见
+[m2-gui-acceptance.md](m2-gui-acceptance.md)。它不证明真实 HTTPS，也不是正常使用方式。

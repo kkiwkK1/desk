@@ -8,6 +8,9 @@
 | [assistant-m1-plan.md](assistant-m1-plan.md) | M1 计划：pi RPC、长期记忆、召唤、数据文件、验收（现行） |
 | [agent-team-handoff.md](agent-team-handoff.md) | M1 接管基线、CommandCode 成员分工、当前任务与验收缺口 |
 | [m1-acceptance.md](m1-acceptance.md) | 完整 M1 验收矩阵、自动/实际 Pi/隔离 GUI 证据、部署及边界 |
+| [m2-cardspec-plan.md](m2-cardspec-plan.md) | M2.0 CardSpec 严格格式、内联数据卡、分工与阶段验收 |
+| [m2-http-plan.md](m2-http-plan.md) | M2.1 用户精确授权、受限 HTTPS、v2 绑定与阶段验收 |
+| [m2-gui-acceptance.md](m2-gui-acceptance.md) | M2 实际隔离 GUI、固定合成 transport、安全边界与证据 |
 | [refactor-notes.md](refactor-notes.md) | keep/archive/delete 审计、`board.cpp` 拆分计划、技术债 |
 | [desk.md](desk.md) | 洞洞板/模块/视觉/配置完整说明 |
 | [framework.md](framework.md) | widget 框架契约、尺寸预设、线程约定 |
@@ -22,5 +25,4 @@
 
 文档改动规则：改构建目标、状态文件、线程/刷新模型、模块契约时更新
 `architecture.md`；新增/移动文档时更新本索引；`assistant-prd.md` 与
-`assistant-plan.md` 是冻结快照，只读不改。本仓库 `main` 是已部署 M1 的稳定
-源码快照，M2 候选计划文档不在 `main` 内，后续在 `dev` 分支新增与索引。
+`assistant-plan.md` 是冻结快照，只读不改。

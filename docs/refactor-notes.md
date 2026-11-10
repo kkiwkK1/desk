@@ -104,3 +104,27 @@ src/widget/board/board_paint.cpp 板面/卡片层绘制、Add 槽、底部提示
 隔离验收阶段未操作现网实例。零工具不是 OS 沙箱，Pi/官方 provider 是可信代码，可写安装临时锁/缓存；
 活跃生产目录只记元数据变化并排除静态断言；密钥扫描是启发式，Clear 多文件非事务/非安全擦除。
 真实 real 的取消/唤醒/资源已跑，但不构成未来 Pi 协议顺序或形式化安全证明。
+
+## 7. M2.0 阶段细化
+
+冻结 PRD 的 D1/D2 描述完整 M2 的数据源/布局/生成目标，没有固定 JSON schema；本轮先实现
+inline-only 的 rows/bar 校验与手动刷新渲染内核，不宣称覆盖 HTTP/文件/exec/LLM 生成。
+CardSpec 放应用 `data` + `panels`，而非 PRD 概念图的 `widget/cardspec`，避免框架反向依赖业务。
+固定一型一卡、默认隐藏、固定配置 JSON 与宿主 INI 分离，不修改已部署 M1 或运行时注册契约。
+32KiB/行数/字段/UTF-8/数值边界属于本阶段明确约束；未来扩展另设计版本与权限，不恢复 M1 模型工具。
+M2.0 已完成官方 21/21、六项关键独立重复、SDK/example 与无窗口渲染验收，保留原 M1 十九项。
+严格扫描器只复用 M1 JSON 值类型/转码/序列化，不改原解析器，避免宽松重复键语义影响严格 schema。
+候选未部署，未验证实际板上交互/权限/reparse/读取竞态故障；不是完整 M2，未开放数据源权限。
+现行计划、最终日志与边界见 [m2-cardspec-plan.md](m2-cardspec-plan.md) §6。
+
+## 8. M2.1 网络能力细化
+
+冻结 PRD 的“HTTP 默认自由”在本阶段收窄为独立用户配置精确授权：spec 只含配置档 id/绑定，
+无 URL/权限/鉴权字段。新 WinHTTP 传输不复用框架旧 HttpGet，避免隐式代理、重定向和重试。
+保持 v1 inline 入口不变，另开 HTTP-only v2 与严格 JSON Pointer；不含认证、exec 或模型工具。
+
+新官方 24/24、七项关键重复、SDK/example 通过；UI 以 publicationEpoch 关闭撤销到 Commit/绘制
+窗口，DNS ctx/响应头查询/超时与长度契约已独立审查修复。真实固定公开探针仅得到
+AddressBlocked（本机保留 198.18/15 DNS 映射），没有 TLS/pin/peer 正向证据，不能签成完整联网验收。
+当前仅离线候选，未部署/未动 M1。逻辑超时不等于 WinHTTP 硬实时返回，公网过滤也不是 OS 沙箱；
+代理支持必须另设计、单独用户授权，不静默降级。现行证据见 [m2-http-plan.md](m2-http-plan.md) §6。

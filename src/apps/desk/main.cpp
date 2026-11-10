@@ -5,6 +5,7 @@
 // adds it to the Add Module menu and persists its position automatically.
 #include "panels/account/account.h"
 #include "panels/assistant/assistant.h"
+#include "panels/cardspec/cardspec.h"
 #include "panels/memory/memory.h"
 #include "panels/ps/ps.h"
 #include "panels/servers/servers.h"
@@ -13,6 +14,7 @@
 #include "widget/board.h"
 #include "widget/store.h"
 
+#include <atomic>
 #include <cstdlib>
 #include <cwctype>
 #include <memory>
@@ -37,6 +39,19 @@ bool TestFlag(const wchar_t* name) {
     if (n == 0 || n >= sizeof(buffer) / sizeof(buffer[0])) return false;
     const std::wstring value(buffer, n);
     return value == L"1" || EqualsNoCase(value, L"true") || EqualsNoCase(value, L"yes");
+}
+
+// Only used by the explicitly isolated CardSpec GUI fixture. Never log data/URLs.
+bool WriteCardSpecTestCount(const std::wstring& path, unsigned count) {
+    HANDLE file = CreateFileW(path.c_str(), GENERIC_WRITE, FILE_SHARE_READ,
+                              nullptr, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr);
+    if (file == INVALID_HANDLE_VALUE) return false;
+    const std::string text = std::to_string(count) + "\n";
+    DWORD written = 0;
+    const bool ok = WriteFile(file, text.data(), (DWORD)text.size(), &written, nullptr) &&
+                    written == text.size();
+    CloseHandle(file);
+    return ok;
 }
 
 std::wstring Trim(const std::wstring& value) {
@@ -115,6 +130,11 @@ int WINAPI wWinMain(HINSTANCE, HINSTANCE, PWSTR, int) {
     // create a real startup entry and do not add a tray icon.
     std::wstring suffix;
     const bool testInstance = wg::appenv::TestInstanceSuffix(&suffix);
+    const bool cardspecOnly = TestFlag(L"DESK_TEST_CARDSPEC_ONLY");
+    if (cardspecOnly && (!testInstance || !wg::appenv::TestConfigDirOverride())) {
+        OutputDebugStringW(L"[desk] CardSpec GUI fixture requires isolated suffix/config.\n");
+        return 2;
+    }
     if (testInstance) {
         options.id = L"desk-" + suffix;
         options.startWithWindows = false;
@@ -130,6 +150,10 @@ int WINAPI wWinMain(HINSTANCE, HINSTANCE, PWSTR, int) {
     std::wstring configError;
     const std::wstring configDir = wg::appenv::ConfigDir(options.title, &configError);
     if (configDir.empty()) {
+        if (cardspecOnly) {
+            OutputDebugStringW(L"[desk] CardSpec GUI fixture config is invalid.\n");
+            return 2;
+        }
         const std::wstring message =
             L"Desktop Desk cannot resolve its configuration directory.\n\n" +
             (configError.empty() ? L"Unknown configuration error." : configError);
@@ -137,6 +161,39 @@ int WINAPI wWinMain(HINSTANCE, HINSTANCE, PWSTR, int) {
         MessageBoxW(nullptr, message.c_str(), L"Desktop Desk",
                     MB_OK | MB_ICONERROR | MB_SETFOREGROUND);
         return 1;
+    }
+
+    // An explicit, validated test instance registers only CardSpec. Its native
+    // fetch seam always supplies fixed synthetic JSON: even an accidental
+    // approved refresh cannot reach DNS/WinHTTP. Confirmation UI stays real.
+    if (cardspecOnly) {
+        const std::wstring countFile = configDir + L"\\cardspec-test-fetch-count.txt";
+        if (!WriteCardSpecTestCount(countFile, 0)) return 2;
+        auto calls = std::make_shared<std::atomic<unsigned>>(0);
+        CardSpecOptions fixture;
+        fixture.confirmNetwork = [](const std::wstring& message) {
+            return MessageBoxW(nullptr, message.c_str(), L"CARDSPEC · 网络授权",
+                               MB_OKCANCEL | MB_ICONWARNING | MB_DEFBUTTON2) == IDOK;
+        };
+        fixture.fetch = [countFile, calls](std::string_view profile,
+                                          const cardspec::HttpPolicy& policy) {
+            cardspec::HttpResult result;
+            const unsigned count = calls->fetch_add(1) + 1;
+            if (!WriteCardSpecTestCount(countFile, count)) return result;
+            cardspec::HttpEndpoint endpoint;
+            cardspec::HttpFailure failure = cardspec::HttpFailure::NotApproved;
+            if (!cardspec::AuthorizeHttp(profile, policy, &endpoint, &failure)) {
+                result.failure = failure;
+                return result;
+            }
+            result.failure = cardspec::HttpFailure::None;
+            result.status = 200;
+            result.body = R"({"items":[{"name":"HTTP_FIXTURE_ROW","text":"SYNTHETIC_RESPONSE","value":3,"max":5}]})";
+            return result;
+        };
+        std::vector<std::unique_ptr<wg::Module>> modules;
+        modules.push_back(CreateCardSpecModule(std::move(fixture)));
+        return wg::RunBoard(std::move(modules), options);
     }
 
     wg::Store assistantConfig;
@@ -177,6 +234,7 @@ int WINAPI wWinMain(HINSTANCE, HINSTANCE, PWSTR, int) {
         modules.push_back(CreateAccountModule());
         modules.push_back(CreateServersModule());
         modules.push_back(CreatePsModule());
+        modules.push_back(CreateCardSpecModule());
     }
     if (assistantEnabled) {
         modules.push_back(CreateAssistantModule());

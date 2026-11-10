@@ -139,6 +139,14 @@ public:
 
     virtual StatusChip Status() const { return {}; }
     virtual std::vector<MenuItem> Menu() const { return {}; }
+    // Called by the board on the UI thread for one of this module's Menu()
+    // items. A menu action never has to ask for a refresh: after the callback
+    // returns the board runs one refresh of this card (OnMenu -> StartRefresh),
+    // so calling RequestRefresh() from here posts a *second* request while that
+    // first worker is still busy - the board records it as "again" and the card
+    // ends up refreshing (and, if it fetches, fetching) twice per click.
+    // Out-of-band events are different: a worker result, a focus change or a
+    // store notification may still call RequestRefresh() to ask for one.
     virtual void OnMenu(int id) { (void)id; }
     virtual bool OnHotkey(int localId) { (void)localId; return false; }
     virtual void OnClick(int x, int y) { (void)x; (void)y; }
