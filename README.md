@@ -313,7 +313,8 @@ build\bin\srvctl.exe doctor
 
 ## 分支、CI 与贡献
 
-- `main` = **稳定 M1**（可交付、可回滚），`dev` = **M2 候选**（日常开发集成分支）。
+- `main` = **已验收阶段基线**（可回滚，未验证能力保留限制），`dev` = **下一阶段开发候选**。
+  PR #1 已合入 CardSpec 界面/离线阶段；真实 HTTPS 正向仍未验证，不等于完整 M2 已完成。
 - 日常开发在 `dev`；开发完成后开 PR，CI **Windows regression** 变绿且维护者
   显式记录人工验收后，才由维护者以 **merge commit** 合入 `main`
   （禁 squash / rebase，合并后 `dev` 不删除）。

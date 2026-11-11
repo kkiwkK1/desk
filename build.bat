@@ -131,7 +131,7 @@ if not exist "build\obj\desk\csp" mkdir "build\obj\desk\csp"
 g++ %CXXFLAGS% -c "src\data\cardspec\cardspec.cpp" -o "build\obj\desk\csp\cardspec.o"
 if errorlevel 1 exit /b 1
 set "DOBJ=!DOBJ! "build\obj\desk\csp\cardspec.o""
-for %%M in (http_source http_policy http_winhttp) do (
+for %%M in (http_source http_policy http_winhttp store) do (
     g++ %CXXFLAGS% -c "src\data\cardspec\%%M.cpp" -o "build\obj\desk\csp\%%M.o"
     if errorlevel 1 exit /b 1
     set "DOBJ=!DOBJ! "build\obj\desk\csp\%%M.o""
@@ -452,6 +452,14 @@ if /i "%~1"=="test" (
     move /y "build\cardspec-network-test.exe.new" "build\cardspec-network-test.exe" >nul
     if errorlevel 1 exit /b 1
 
+    echo   - cardspec proposal store
+    g++ %CXXFLAGS% -municode -c "tests\cardspec_store.cpp" -o "build\obj\test\cardspec_store.o"
+    if errorlevel 1 exit /b 1
+    g++ -municode -mconsole "build\obj\test\cardspec_store.o" "build\obj\desk\csp\store.o" "build\obj\desk\csp\cardspec.o" "build\obj\test\assistant_json.o" "build\libwg.a" -o "build\cardspec-store-test.exe.new" %LIBS%
+    if errorlevel 1 exit /b 1
+    move /y "build\cardspec-store-test.exe.new" "build\cardspec-store-test.exe" >nul
+    if errorlevel 1 exit /b 1
+
     echo [build] sign tests
     powershell -NoProfile -ExecutionPolicy Bypass -File tools\sign-local.ps1 -Path "build\*-test.exe"
     if errorlevel 1 (echo [build] test signing failed & exit /b 1)
@@ -510,6 +518,8 @@ if /i "%~1"=="test" (
     "build\cardspec-http-test.exe"
     if errorlevel 1 exit /b 1
     "build\cardspec-network-test.exe"
+    if errorlevel 1 exit /b 1
+    "build\cardspec-store-test.exe"
     if errorlevel 1 exit /b 1
 
     echo [build] source inventory

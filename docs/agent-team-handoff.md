@@ -1,5 +1,12 @@
 # M1 接管与 Agent Team 任务板（2026-11-08—09）
 
+> **当前阶段**：用户已自行合并 PR #1 为 `b1d581f`，会话确认“验收完成继续推进”。
+> Lead 已事后补录验收范围/原话/准确 head SHA，不冒称合并前已有评论；dev 已 fast-forward
+> 同步并 push，下一阶段只在 dev。真实 HTTPS 正向仍未验证，阶段验收不代表完整 M2。
+> 当前 M2.2a native proposal/store 核心已通过官方 25 项，新核心 921 checks/0 failed/4 skips；
+> 不接产品 UI 或模型、不触实际用户配置。新分工/竞态与未测边界见
+> [m2-proposal-plan.md](m2-proposal-plan.md)。下面旧快照/草稿状态均为历史。
+
 > **当前 GitHub 流程**：正式仓库为 `kkiwkK1/desk`。`main` 的 `a035f02` 是已重新通过
 > 19/19、SDK/example 的稳定 M1 导入；本分支为独立新仓库的 `dev`，仅承载 M2 开发候选。
 > 原 aimeter 仓库历史/工作树没有被改写。后续按 [CONTRIBUTING.md](../CONTRIBUTING.md)

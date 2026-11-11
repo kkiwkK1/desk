@@ -869,3 +869,18 @@ M0b（通知/热键/简报）、M3（看板/任务）未在本轮展开；
 - 宿主菜单在模块 `OnMenu` 返回后负责一次刷新。CardSpec 菜单不再重复调用 `RequestRefresh`，
   防止同一点击排入第二次取数；撤销仍立即推进 epoch/重绘，未授权的宿主刷新不得调用 transport。
   非菜单的异步更新仍可正常请求刷新。
+
+## 16. M2.2a 原生提案生命周期（核心候选，未接 UI）
+
+PR #1 已由用户合并为 `b1d581f`；dev 已正常同步。下一阶段新增 `data/cardspec/store`，
+只提供 v1 inline 候选校验、可信本地目录 Snapshot、固定叶子 Apply/Rollback 的 native 核心，
+不接产品菜单或模型；正常卡片此时仍只读，不自动写任何用户文件。
+
+固定目标为 `cardspec.json` / `.json.bak` / `.json.tmp`（完整名字见接口），SHA-256 + 原始
+字节 Snapshot 预检，协作命名互斥；flushed temp 后 ReplaceFileW 同步替换/备份，新建不覆盖。
+当前与 backup 双预期回滚、原字节恢复、单槽交换；首次无备份不提供删文件式 undo。
+拒绝不安全文件类型、超限、非 v1 当前文档及非协作者已检测变更；写后漂移返回错误状态，
+不自动回滚、不把乐观预检称强 CAS 或断电事务。仅在合成目录测试；本轮官方回归已通过，
+新增核心 921 checks/0 failed/4 skips（符号链接权限与读 Raced 未覆盖），UI/模型仍未接线。
+
+详细契约、G/N 边界、分工及 UI/模型后续见 [m2-proposal-plan.md](m2-proposal-plan.md)。
