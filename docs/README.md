@@ -11,6 +11,7 @@
 | [m2-cardspec-plan.md](m2-cardspec-plan.md) | M2.0 CardSpec 严格格式、内联数据卡、分工与阶段验收 |
 | [m2-http-plan.md](m2-http-plan.md) | M2.1 用户精确授权、受限 HTTPS、v2 绑定与阶段验收 |
 | [m2-gui-acceptance.md](m2-gui-acceptance.md) | M2 实际隔离 GUI、固定合成 transport、安全边界与证据 |
+| [m2-proposal-plan.md](m2-proposal-plan.md) | M2.2 候选/生效/回滚核心、竞态边界与后续预览确认/模型接线 |
 | [refactor-notes.md](refactor-notes.md) | keep/archive/delete 审计、`board.cpp` 拆分计划、技术债 |
 | [desk.md](desk.md) | 洞洞板/模块/视觉/配置完整说明 |
 | [framework.md](framework.md) | widget 框架契约、尺寸预设、线程约定 |

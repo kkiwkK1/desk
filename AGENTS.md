@@ -16,8 +16,8 @@ Windows 桌面洞洞板 `desk.exe`（C++20 + Win32，MinGW-w64）：一个进程
 
 | 分支 | 角色 | 谁能写 | 规则 |
 |---|---|---|---|
-| `main` | **稳定 M1**，可交付/可回滚 | 只经由 PR 合并 | 保护开启：必须有 PR、required check `Windows regression` 绿、禁 force push、禁删除分支、要求对话解决；`required_approving_review_count = 0`（单人仓库不能自我 approve） |
-| `dev` | **M2 候选**，日常集成分支 | 开发者可直接 push | 不要求先开 PR；禁 force push；不设自动删除；验收合并后从 `main` 同步 |
+| `main` | **已验收阶段基线**，可回滚；未验证能力单列限制 | 只经由 PR 合并 | 保护开启：必须有 PR、required check `Windows regression` 绿、禁 force push、禁删除分支、要求对话解决；`required_approving_review_count = 0`（单人仓库不能自我 approve） |
+| `dev` | **下一阶段开发候选**，日常集成分支 | 开发者可直接 push | 不要求先开 PR；禁 force push；不设自动删除；验收合并后从 `main` 同步 |
 
 - **`main` 初始化提交之后严禁直接 push**（对 Lead 也一样）：所有进入 `main` 的改动
   必须走 PR，并且有 `kkiwkK1` 的显式人工验收记录（PR 评论里的「验收通过 + 日期 +

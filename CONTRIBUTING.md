@@ -1,6 +1,6 @@
 # 贡献指南（main / dev 流程）
 
-本仓库用两条长期分支：**`main` = 稳定 M1**，**`dev` = M2 候选**。日常开发在 `dev`，
+本仓库用两条长期分支：**`main` = 已验收阶段基线**，**`dev` = 下一阶段开发候选**。日常开发在 `dev`，
 开发完成后开 PR，CI 变绿 + 维护者**显式人工验收**后才由维护者 merge 到 `main`。
 协作/构建/凭据约定见 [AGENTS.md](AGENTS.md)，用户向说明见 [README.md](README.md)。
 
@@ -24,8 +24,8 @@ AI/子 agent 的 Git 写操作一律由维护者代做：它们只写文件、�
 
 | 分支 | 含义 | 进入方式 |
 |---|---|---|
-| `main` | 稳定 M1：可交付、可回滚 | 只接受 PR；required check `Windows regression` 通过 + 维护者验收记录 |
-| `dev` | M2 候选：日常集成 | 直接 push 或 PR；不自动删除；不设「先 PR」的前置要求 |
+| `main` | 已验收阶段基线：可回滚，未验证能力保留限制 | 只接受 PR；required check `Windows regression` 通过 + 维护者验收记录 |
+| `dev` | 下一阶段候选：日常集成 | 直接 push 或 PR；不自动删除；不设「先 PR」的前置要求 |
 | `feat/*`、`fix/*` 等 | 可选的一次性工作分支 | 从 `dev` 切出，PR 目标 `dev`，合并后可删 |
 
 `main` 保护（由维护者在 GitHub 设置，协作者不要改）：
@@ -62,10 +62,11 @@ powershell -NoProfile -ExecutionPolicy Bypass -File tools\build-lock.ps1 -Target
 1. 从 `dev` 切工作分支（或直接在 `dev` 上提交后开 PR，二选一）。
 2. 填 `.github/PULL_REQUEST_TEMPLATE.md`：摘要、范围、验证、风险、检查清单。
 3. 目标分支规则：
-   - **日常开发 / M2 功能 → 目标 `dev`**；M2 未验收时请开 **draft PR**，
-     验收后才转 ready 并合并到 `dev`。
-   - **`main`** 只用于：稳定 M1 的修复、以及 `dev` 上已验收内容的发布。目标 `main`
-     的 PR 必须已经带上验收记录。
+   - **直接在 `dev` 开发 → `dev` 到 `main` 的阶段 PR**；验收前保持 **draft**，
+     完成 CI 和维护者明确验收后才转 ready，以 merge commit 发布到 `main`。
+   - 可选 `feat/*` / `fix/*` 工作分支的集成 PR 目标是 `dev`；进入 `dev` 不等于获准发布。
+   - **`main`** 只接受阶段基线修复及 `dev` 上已验收内容。合并前必须带上验收记录，
+     并保留真实网络等尚未验证能力的限制，不因阶段验收就扩大结论。
 4. 等 required check **`Windows regression`** 在最新 commit 上变绿；失败就修，
    不要靠重跑碰运气（重跑不改代码只会重复同样的失败）。
 5. 不要开 auto-merge，不要自己合并到 `main`。`dev` 的 PR 也建议由维护者合并，
